@@ -11,16 +11,24 @@
 - Confirm `AI_PROVIDER` is set to `claude` or `openai`.
 - Add the matching API key to `.env`.
 - Install dependencies from `requirements.txt` so the provider SDK is available.
+- Run `python main.py check` to confirm whether live AI is configured.
 
 ### Discord messages are not sent
 - Verify `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID`.
 - Make sure the bot is invited to the server and has permission to post in the channel.
 - Test a manual run without `--schedule` first to confirm formatting and credentials.
+- Only test Discord after `python main.py lineup` succeeds locally.
 
 ### Scheduled jobs do not start
 - Ensure `APScheduler` is installed in the active virtual environment.
 - Check that the `--time` argument uses `HH:MM` in 24-hour format.
 - Run the process in an environment that stays alive long enough for the job to trigger.
+- Verify Discord configuration before scheduling because scheduled runs send reports to Discord.
+
+### The CLI says configuration is missing
+- Run `python main.py check` to see the current setup state.
+- Confirm that `.env` exists in the project root.
+- Re-open your shell or reactivate your virtual environment after editing `.env` if your workflow depends on exported variables.
 
 ## FAQ
 

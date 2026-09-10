@@ -15,6 +15,8 @@ from config import (
     ESPN_S2,
     ESPN_SWID,
     OPENAI_API_KEY,
+    has_ai_provider_key,
+    validate_config,
 )
 from fantasy_ai import FantasyAssistant
 from utils.logger import configure_logging, get_logger
@@ -22,10 +24,35 @@ from utils.logger import configure_logging, get_logger
 LOGGER = get_logger(__name__)
 
 
+def run_setup_check() -> dict[str, object]:
+    """Return a local setup checklist summary for the current environment."""
+    missing_core = []
+    try:
+        validate_config(require_ai=False, require_discord=False)
+    except ValueError as exc:
+        missing_core = str(exc).removeprefix("Missing required configuration: ").removesuffix(
+            ". Check your .env file."
+        ).split(", ")
+
+    return {
+        "core_configured": not missing_core,
+        "missing_core": [item for item in missing_core if item],
+        "ai_provider": AI_PROVIDER,
+        "ai_live": has_ai_provider_key(),
+        "discord_configured": bool(DISCORD_BOT_TOKEN and DISCORD_CHANNEL_ID),
+        "next_steps": [
+            "1. Install dependencies with `pip install -r requirements.txt`.",
+            "2. Copy `.env.example` to `.env` and fill in ESPN credentials first.",
+            "3. Add one AI API key to replace fallback responses with live analysis.",
+            "4. Run `python main.py lineup` before enabling Discord or scheduling.",
+            "5. Test `--discord` only after a manual report succeeds locally.",
+        ],
+    }
+
+
 def build_assistant() -> FantasyAssistant:
     """Construct the main assistant from environment configuration."""
-    if not ESPN_LEAGUE_ID:
-        raise ValueError("ESPN_LEAGUE_ID is required before running reports.")
+    validate_config(require_ai=False, require_discord=False)
 
     ai_api_key = ANTHROPIC_API_KEY if AI_PROVIDER == "claude" else OPENAI_API_KEY
     return FantasyAssistant(
@@ -86,8 +113,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Fantasy Football AI assistant")
     parser.add_argument(
         "report_type",
-        choices=["lineup", "trade", "pickup"],
-        help="Type of report to generate.",
+        choices=["lineup", "trade", "pickup", "check"],
+        help="Type of report to generate, or `check` for setup guidance.",
     )
     parser.add_argument("--discord", action="store_true", help="Send the report to Discord.")
     parser.add_argument("--schedule", action="store_true", help="Run the report on a daily schedule.")
@@ -105,9 +132,17 @@ def main() -> int:
     try:
         args = parse_args()
 
+        if args.report_type == "check":
+            print(run_setup_check())
+            return 0
+
         if args.schedule:
+            validate_config(require_ai=False, require_discord=True)
             schedule_daily_reports(args.report_type, args.time)
             return 0
+
+        if args.discord:
+            validate_config(require_ai=False, require_discord=True)
 
         report = run_manual_report(args.report_type, send_to_discord=args.discord)
         print(report)

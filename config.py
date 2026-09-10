@@ -48,16 +48,48 @@ LINEUP_CHECK_TIME = "10:00"  # 10 AM (before games)
 ESPN_API_BASE = "https://lm-api-reads.fantasy.espn.com/apis/site/v2"
 NFL_STATUS_ENDPOINT = "https://site.api.espn.com/apis/site/v2/sports/football/nfl"
 
-def validate_config() -> bool:
-    """Validate required runtime configuration for production workflows."""
-    required = [ESPN_LEAGUE_ID, ESPN_S2, ESPN_SWID, DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID]
-    if AI_PROVIDER == "claude":
-        required.append(ANTHROPIC_API_KEY)
-    elif AI_PROVIDER == "openai":
-        required.append(OPENAI_API_KEY)
 
-    missing = [config for config in required if not config]
+def has_ai_provider_key(provider: str | None = None) -> bool:
+    """Return whether the requested AI provider has a configured API key."""
+    selected_provider = (provider or AI_PROVIDER).lower()
+    if selected_provider == "claude":
+        return bool(ANTHROPIC_API_KEY)
+    if selected_provider == "openai":
+        return bool(OPENAI_API_KEY)
+    return False
+
+
+def get_missing_config(*, require_ai: bool = False, require_discord: bool = False) -> list[str]:
+    """Return the names of environment variables still needed for a workflow."""
+    missing: list[str] = []
+
+    if not ESPN_LEAGUE_ID:
+        missing.append("ESPN_LEAGUE_ID")
+    if not ESPN_S2:
+        missing.append("ESPN_S2")
+    if not ESPN_SWID:
+        missing.append("ESPN_SWID")
+
+    if require_ai:
+        if AI_PROVIDER == "claude" and not ANTHROPIC_API_KEY:
+            missing.append("ANTHROPIC_API_KEY")
+        elif AI_PROVIDER == "openai" and not OPENAI_API_KEY:
+            missing.append("OPENAI_API_KEY")
+
+    if require_discord:
+        if not DISCORD_BOT_TOKEN:
+            missing.append("DISCORD_BOT_TOKEN")
+        if not DISCORD_CHANNEL_ID:
+            missing.append("DISCORD_CHANNEL_ID")
+
+    return missing
+
+
+def validate_config(*, require_ai: bool = False, require_discord: bool = False) -> bool:
+    """Validate runtime configuration for the requested workflow."""
+    missing = get_missing_config(require_ai=require_ai, require_discord=require_discord)
     if missing:
-        raise ValueError("Missing required configuration. Check your .env file.")
+        joined = ", ".join(missing)
+        raise ValueError(f"Missing required configuration: {joined}. Check your .env file.")
 
     return True

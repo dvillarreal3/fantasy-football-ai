@@ -67,6 +67,37 @@ SLEEPER_API_KEY=optional
 FANTASY_PROS_API_KEY=optional
 ```
 
+## First Local Setup Order
+
+Use this order to keep setup simple and isolate failures:
+
+1. Create a virtual environment.
+2. Install dependencies with `pip install -r requirements.txt`.
+3. Copy `.env.example` to `.env`.
+4. Fill in ESPN credentials first:
+   - `ESPN_LEAGUE_ID`
+   - `ESPN_S2`
+   - `ESPN_SWID`
+5. Add one AI provider key:
+   - `ANTHROPIC_API_KEY` for Claude
+   - or `OPENAI_API_KEY` for OpenAI
+6. Run the setup check:
+```bash
+python main.py check
+```
+7. Run one manual report before enabling Discord or scheduling:
+```bash
+python main.py lineup
+```
+8. If the report works, test Discord delivery:
+```bash
+python main.py lineup --discord
+```
+9. Only after that, enable scheduled runs:
+```bash
+python main.py lineup --schedule --time 08:00
+```
+
 ## Getting ESPN Credentials
 
 1. Open ESPN Fantasy Football in your browser
@@ -101,8 +132,15 @@ pickups = assistant.get_pickup_suggestions()
 ### Running Automated Reports
 ```bash
 # Run daily at 8 AM
-python main.py --schedule daily --time 08:00
+python main.py lineup --schedule --time 08:00
 ```
+
+### Checking Local Setup
+```bash
+python main.py check
+```
+
+This prints whether core ESPN settings are present, whether your selected AI provider is configured for live responses, and whether Discord is ready.
 
 ## Project Structure
 
@@ -137,6 +175,25 @@ Edit `config.py` to customize:
 - Discord message formatting
 - Scheduling preferences
 - Data source priorities
+
+## Optional Local Dashboard
+
+Adding a local dashboard is very feasible because the repository already separates data access, recommendation logic, and delivery.
+
+Recommended order:
+1. Get one local CLI report working first.
+2. Keep lineup, trade, and pickup outputs in stable dictionary structures.
+3. Add a lightweight dashboard layer on top of those outputs.
+
+Good options:
+- **Streamlit** for the fastest personal dashboard
+- **FastAPI + frontend** for a cleaner long-term application structure
+
+Suggested first dashboard views:
+- roster overview
+- lineup recommendations
+- waiver wire suggestions
+- injury and news summaries
 
 ## How It Works
 
